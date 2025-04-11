@@ -3,23 +3,23 @@ description: 'Create or update a Route 53 record for a subdomain using Terraform
 
 inputs:
   project-name:
-    description: 'The project name used for naming resources and tags'
+    description: 'Project name used for tagging resources'
     required: true
 
   root-domain:
-    description: 'The root domain (e.g., example.com)'
+    description: 'Root domain (e.g., example.com)'
     required: true
 
   subdomain:
-    description: 'The subdomain to create (e.g., www, app)'
+    description: 'Subdomain to create (e.g., www, app)'
     required: true
 
   target-domain:
-    description: 'The value of the DNS record (e.g., CloudFront domain, S3 endpoint)'
+    description: 'Value for the DNS record (e.g., CloudFront domain or S3 website endpoint)'
     required: true
 
   target-record-type:
-    description: 'The record type (e.g., A or CNAME)'
+    description: 'DNS record type (e.g., A or CNAME)'
     required: false
     default: 'CNAME'
 
@@ -28,7 +28,7 @@ inputs:
     required: true
 
   aws-region:
-    description: 'AWS region'
+    description: 'AWS region to use'
     required: false
     default: 'us-east-1'
 
