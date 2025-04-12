@@ -55,6 +55,29 @@ runs:
       shell: bash
       working-directory: ${{ inputs.terraform-dir }}
 
+    - name: Get Hosted Zone ID
+      id: get_zone
+      run: |
+        HZ_ID=$(aws route53 list-hosted-zones-by-name \
+          --dns-name "${{ inputs.root-domain }}" \
+          --query "HostedZones[0].Id" \
+          --output text)
+
+        # Strip the "/hostedzone/" prefix
+        HZ_ID_CLEAN=${HZ_ID##*/}
+
+        echo "zone_id=$HZ_ID_CLEAN" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Terraform Import Hosted Zone
+      if: steps.get_zone.outputs.zone_id != ''
+      run: |
+        terraform import aws_route53_zone.primary ${{
+          steps.get_zone.outputs.zone_id
+        }}
+      shell: bash
+      working-directory: ${{ inputs.terraform-dir }}
+
     - name: Terraform Plan
       run: |
         terraform plan \

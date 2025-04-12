@@ -3,7 +3,8 @@ variable "aws_region" {
 }
 
 variable "root_domain" {
-  type = string
+  type        = string
+  description = "The root domain name (e.g., example.com)"
 }
 
 variable "subdomain" {
@@ -24,4 +25,15 @@ variable "target_domain" {
 variable "ttl" {
   type    = number
   default = 300
+}
+
+variable "environment" {
+  description = "Environment name for tagging"
+  type        = string
+  default     = "dev"
+}
+
+variable "project_name" {
+  description = "Project name for tagging"
+  type        = string
 }
