@@ -2,7 +2,7 @@ provider "aws" {
   region = var.aws_region
 }
 
-resource "aws_route53_zone" "primary" {
+data "aws_route53_zone" "primary" {
   name = var.root_domain
 
   tags = {
@@ -12,7 +12,7 @@ resource "aws_route53_zone" "primary" {
 }
 
 resource "aws_route53_record" "subdomain" {
-  zone_id = aws_route53_zone.primary.zone_id
+  zone_id = data.aws_route53_zone.primary.zone_id
   name    = local.fqdn
   type    = var.target_record_type
   ttl     = var.ttl
