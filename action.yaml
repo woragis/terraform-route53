@@ -1,79 +1,41 @@
-name: 'Terraform Route53 DNS Record and Subdomain'
-description: 'Create or update a Route 53 record for a subdomain using Terraform'
-
+name: Deploy Serverless App
+description: Deploy a Node.js app to AWS using the Serverless Framework.
+author: Woragis
 inputs:
-  project-name:
-    description: 'Project name used for tagging resources'
+  serverless_token:
+    description: Serverless Dashboard access token
     required: true
-
-  root-domain:
-    description: 'Root domain (e.g., example.com)'
+  org:
+    description: Serverless organization name
     required: true
-
-  subdomain:
-    description: 'Subdomain to create (e.g., www, app)'
+  app:
+    description: Serverless app name
     required: true
-
-  target-domain:
-    description: 'Value for the DNS record (e.g., CloudFront domain or S3 website endpoint)'
-    required: true
-
-  target-record-type:
-    description: 'DNS record type (e.g., A or CNAME)'
+  node_version:
+    description: Node.js version
+    default: '18'
     required: false
-    default: 'CNAME'
-
-  terraform-dir:
-    description: 'Path to the Terraform module directory'
-    required: true
-
-  aws-region:
-    description: 'AWS region to use'
-    required: false
-    default: 'us-east-1'
-
-  environment:
-    description: 'Environment name for tagging'
-    required: true
-
 runs:
   using: 'composite'
   steps:
-    - name: Checkout Code
+    - name: 📥 Checkout
       uses: actions/checkout@v3
 
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v3
       with:
-        terraform_version: '1.5.0'
+        node-version: ${{ inputs.node_version }}
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ inputs.aws-region }}
-
-    - name: Terraform Init
-      run: terraform init
+    - name: 📦 Install Serverless
+      run: npm install -g serverless
       shell: bash
-      working-directory: ${{ inputs.terraform-dir }}
 
-    - name: Terraform Plan
+    - name: 🔐 Authenticate Serverless
       run: |
-        terraform plan \
-          -var "aws_region=${{ inputs.aws-region }}" \
-          -var "root_domain=${{ inputs.root-domain }}" \
-          -var "subdomain=${{ inputs.subdomain }}" \
-          -var "target_domain=${{ inputs.target-domain }}" \
-          -var "target_record_type=${{ inputs.target-record-type }}" \
-          -var "environment=${{ inputs.environment }}" \
-          -var "project_name=${{ inputs.project-name }}" \
-          -out=tfplan
+        mkdir -p ~/.serverless
+        echo "{\"userId\":\"cli\",\"frameworkId\":\"cli\",\"dashboard\":true,\"token\":\"${{ inputs.serverless_token }}\"}" > ~/.serverless/auth.json
       shell: bash
-      working-directory: ${{ inputs.terraform-dir }}
 
-    - name: Terraform Apply
-      run: terraform apply -auto-approve tfplan
+    - name: 🚀 Deploy
+      run: serverless deploy --org ${{ inputs.org }} --app ${{ inputs.app }}
       shell: bash
-      working-directory: ${{ inputs.terraform-dir }}
