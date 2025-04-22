@@ -2,21 +2,23 @@ provider "aws" {
   region = var.aws_region
 }
 
-data "aws_route53_zone" "primary" {
-  name = var.root_domain
-
-  tags = {
-    Environment = var.environment
-    Project     = var.project_name
-  }
+resource "aws_lambda_function" "my_lambda" {
+  filename         = "function.zip"
+  function_name    = "myLambda"
+  role             = aws_iam_role.lambda_exec.arn
+  handler          = "index.handler"
+  runtime          = "nodejs18.x"
+  source_code_hash = filebase64sha256("function.zip")
 }
 
-resource "aws_route53_record" "subdomain" {
-  zone_id = data.aws_route53_zone.primary.zone_id
-  name    = local.fqdn
-  type    = var.target_record_type
-  ttl     = var.ttl
-  records = [var.target_domain]
+resource "aws_apigatewayv2_api" "http_api" {
+  name          = "my-api"
+  protocol_type = "HTTP"
+}
 
-  allow_overwrite = true
+resource "aws_apigatewayv2_integration" "lambda" {
+  api_id             = aws_apigatewayv2_api.http_api.id
+  integration_type   = "AWS_PROXY"
+  integration_uri    = aws_lambda_function.my_lambda.invoke_arn
+  integration_method = "POST"
 }
