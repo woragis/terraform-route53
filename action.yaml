@@ -1,41 +1,88 @@
 name: Deploy Serverless App
-description: Deploy a Node.js app to AWS using the Serverless Framework.
-author: Woragis
+description: Deploy a serverless app to AWS using Serverless Framework
 inputs:
-  serverless_token:
-    description: Serverless Dashboard access token
-    required: true
-  org:
-    description: Serverless organization name
-    required: true
-  app:
-    description: Serverless app name
-    required: true
-  node_version:
-    description: Node.js version
-    default: '18'
+  node-version:
+    description: 'Node.js version'
     required: false
+    default: '23.9'
+
+  aws-access-key-id:
+    description: 'AWS Access Key ID'
+    required: true
+
+  aws-secret-access-key:
+    description: 'AWS Secret Access Key'
+    required: true
+
+  aws-region:
+    description: 'AWS region'
+    required: false
+    default: 'us-east-1'
+
+  table-name:
+    description: 'DynamoDB Table Name'
+    required: true
+
+  user-pool-id:
+    description: 'Cognito User Pool ID'
+    required: true
+
+  client-id:
+    description: 'Cognito Client ID'
+    required: true
+
+  client-secret:
+    description: 'Cognito Client Secret'
+    required: true
+
+  serverless-access-key:
+    description: 'Serverless Framework Access Key'
+    required: true
+
+outputs:
+  api-url:
+    description: 'The deployed API endpoint URL'
+    value: ${{ steps.deploy.outputs.api-url }}
+
 runs:
   using: 'composite'
   steps:
-    - name: 📥 Checkout
+    - name: 📥 Checkout Repository
       uses: actions/checkout@v3
 
-    - name: 🟢 Setup Node.js
+    - name: ⚙️ Setup Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: ${{ inputs.node_version }}
+        node-version: ${{ inputs.node-version }}
 
-    - name: 📦 Install Serverless
-      run: npm install -g serverless
+    - name: 📦 Install Dependencies
+      run: npm ci
       shell: bash
 
-    - name: 🔐 Authenticate Serverless
+    - name: ☁️ Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: 🚀 Deploy with Serverless
+      id: deploy
+      shell: bash
+      env:
+        TABLE_NAME: ${{ inputs.table-name }}
+        USER_POOL_ID: ${{ inputs.user-pool-id }}
+        CLIENT_ID: ${{ inputs.client-id }}
+        CLIENT_SECRET: ${{ inputs.client-secret }}
+        SERVERLESS_ACCESS_KEY: ${{ inputs.serverless-access-key }}
       run: |
-        mkdir -p ~/.serverless
-        echo "{\"userId\":\"cli\",\"frameworkId\":\"cli\",\"dashboard\":true,\"token\":\"${{ inputs.serverless_token }}\"}" > ~/.serverless/auth.json
-      shell: bash
+        npx serverless deploy > serverless-output.txt 2>&1
+        cat serverless-output.txt
+        endpoint=$(grep -o 'https://[a-zA-Z0-9\-\.]*\.execute-api\.[a-zA-Z0-9\-]*\.amazonaws.com/' serverless-output.txt | head -n 1)
+        echo "api-url=$endpoint" >> $GITHUB_OUTPUT
 
-    - name: 🚀 Deploy
-      run: serverless deploy --org ${{ inputs.org }} --app ${{ inputs.app }}
-      shell: bash
+    - name: 📦 Upload Output as Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: serverless-deployment-log
+        path: serverless-output.txt
